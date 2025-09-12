@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* App-level tweaks */
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+
