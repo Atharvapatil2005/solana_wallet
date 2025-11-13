@@ -12,10 +12,17 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-toast": "^1.1.5",
     "@solana/web3.js": "^1.95.3",
+    "framer-motion": "^11.18.2",
+    "lucide-react": "^0.462.0",
+    "lightweight-charts": "^4.1.0",
+    "qrcode.react": "^4.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-toastify": "^10.0.5"
+    "react-toastify": "^10.0.6",
+    "recharts": "^2.15.4"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
@@ -25,4 +32,3 @@
     "vite": "^5.4.6"
   }
 }
-

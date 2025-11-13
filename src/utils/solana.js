@@ -84,4 +84,31 @@ export async function getRecentTransactions(pubkey, limit = 10) {
   }
 }
 
+// Returns a richer transaction view (date, amount if known, direction)
+export async function getRecentTransactionsDetailed(pubkey, limit = 10) {
+  try {
+    const sigInfos = await connection.getSignaturesForAddress(pubkey, { limit });
+    const signatures = sigInfos.map((s) => s.signature);
+    const results = [];
+    for (const sig of signatures) {
+      const tx = await connection.getTransaction(sig, { commitment: 'confirmed' });
+      const blockTime = tx?.blockTime ? new Date(tx.blockTime * 1000) : null;
+      const date = blockTime ? blockTime.toLocaleString() : '—';
+      let amount = '—';
+      let type = 'Transfer';
+      if (tx?.meta) {
+        const pre = tx.meta.preBalances?.[0] ?? 0;
+        const post = tx.meta.postBalances?.[0] ?? pre;
+        const diff = post - pre; // lamports change for fee payer
+        if (diff < 0) { type = 'Send'; amount = `${(-diff) / LAMPORTS_PER_SOL} SOL`; }
+        if (diff > 0) { type = 'Receive'; amount = `${diff / LAMPORTS_PER_SOL} SOL`; }
+      }
+      results.push({ signature: sig, date, type, amount, status: tx?.meta?.err ? 'Failed' : 'Confirmed' });
+    }
+    return results;
+  } catch (error) {
+    return [];
+  }
+}
+
 
