@@ -2,23 +2,23 @@ import React, { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { Keypair } from '@solana/web3.js';
-import { setBackupDownloaded } from '../utils/walletStorage.js';
+import { addWallet, importWallet, exportWallet, getWallets } from '../utils/walletManager.js';
+import { getActiveWallet } from '../utils/walletManager.js';
 
-const LOCAL_STORAGE_KEY = 'solana_wallet_secret';
-
-export default function Settings({ address, rpcUrl, onClearLocal, onWalletImported }) {
+export default function Settings({ address, rpcUrl, onWalletImported, activeWallet }) {
   const [secretText, setSecretText] = useState('');
   const fileRef = useRef(null);
 
   function importFromArray(arr) {
     try {
-      const bytes = Uint8Array.from(arr);
-      if (!bytes || bytes.length === 0) throw new Error('Empty key');
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(Array.from(bytes)));
+      const wallet = importWallet(arr);
       toast.success('Wallet imported');
       onWalletImported?.();
+      
+      // Dispatch wallet changed event
+      window.dispatchEvent(new CustomEvent('walletChanged'));
     } catch (e) {
-      toast.error('Invalid secret key array');
+      toast.error(e.message || 'Invalid secret key array');
     }
   }
 
@@ -37,10 +37,24 @@ export default function Settings({ address, rpcUrl, onClearLocal, onWalletImport
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const arr = JSON.parse(reader.result);
-        importFromArray(arr);
-      } catch (_) {
-        toast.error('Invalid wallet.json');
+        const data = JSON.parse(reader.result);
+        
+        // Handle new format: { publicKey, secretKey }
+        if (data.publicKey && data.secretKey) {
+          const wallet = importWallet(data);
+          toast.success('Wallet imported');
+          onWalletImported?.();
+          window.dispatchEvent(new CustomEvent('walletChanged'));
+        }
+        // Handle legacy format: [1,2,3,...] (secret key array)
+        else if (Array.isArray(data)) {
+          importFromArray(data);
+        }
+        else {
+          throw new Error('Invalid wallet format');
+        }
+      } catch (error) {
+        toast.error(error.message || 'Invalid wallet.json');
       } finally {
         if (fileRef.current) fileRef.current.value = '';
       }
@@ -49,32 +63,37 @@ export default function Settings({ address, rpcUrl, onClearLocal, onWalletImport
   }
 
   function createNewWallet() {
-    const kp = Keypair.generate();
-    const arr = Array.from(kp.secretKey);
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(arr));
-    toast.success('New wallet created');
-    onWalletImported?.();
+    try {
+      const kp = Keypair.generate();
+      const wallet = addWallet({
+        publicKey: kp.publicKey.toBase58(),
+        secretKey: Array.from(kp.secretKey),
+        label: `Wallet ${getWallets().length + 1}`,
+      });
+      
+      toast.success('New wallet created');
+      onWalletImported?.();
+      
+      // Dispatch wallet changed event
+      window.dispatchEvent(new CustomEvent('walletChanged'));
+    } catch (error) {
+      toast.error(error.message || 'Failed to create wallet');
+    }
   }
 
-  function downloadWallet() {
-    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (!saved) {
-      toast.info('No wallet in localStorage');
+  async function downloadWallet() {
+    const currentWallet = activeWallet || getActiveWallet();
+    if (!currentWallet) {
+      toast.info('No wallet available');
       return;
     }
+    
     try {
-      const blob = new Blob([JSON.stringify(JSON.parse(saved), null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'wallet.json';
-      a.click();
-      URL.revokeObjectURL(url);
+      await exportWallet(currentWallet.id);
+      toast.success('Wallet downloaded');
       
-      // Mark backup as downloaded if address is available
-      if (address) {
-        setBackupDownloaded(address);
-      }
+      // Dispatch wallet changed event to update UI
+      window.dispatchEvent(new CustomEvent('walletChanged'));
     } catch (error) {
       toast.error('Failed to download wallet');
       console.error('Download error:', error);
@@ -162,12 +181,6 @@ export default function Settings({ address, rpcUrl, onClearLocal, onWalletImport
               className="hover-lift px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-700 to-cyan-600 hover:from-cyan-600 hover:to-cyan-500 text-sm font-semibold text-white shadow-lg hover:shadow-cyan-500/25"
             >
               Download wallet.json
-            </button>
-            <button 
-              onClick={onClearLocal} 
-              className="hover-lift px-6 py-3 rounded-xl bg-neutral-800/50 border border-neutral-700/50 hover:bg-neutral-700/50 hover:border-neutral-600/50 text-sm font-semibold text-neutral-300"
-            >
-              Remove from localStorage
             </button>
           </div>
         </div>

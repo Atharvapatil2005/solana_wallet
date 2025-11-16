@@ -1,8 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { Keypair, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
+import { LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
 import { getBalance, getRecentTransactionsDetailed, getRecentTransactionsWidget, sendSol } from './utils/solana.js';
+import { getActiveWallet, getActiveKeypair } from './utils/walletManager.js';
 import Sidebar from './components/Sidebar.jsx';
 import BalanceCard from './components/BalanceCard.jsx';
 import Dashboard from './components/Dashboard.jsx';
@@ -15,9 +16,7 @@ import ReceiveModal from './components/ReceiveModal.jsx';
 import Settings from './components/Settings.jsx';
 import ThemeToggle from './components/ThemeToggle.jsx';
 import BackupReminder from './components/BackupReminder.jsx';
-import { clearBackupFlag } from './utils/walletStorage.js';
-
-const LOCAL_STORAGE_KEY = 'solana_wallet_secret';
+import WalletSwitcher from './components/WalletSwitcher.jsx';
 
 export default function App() {
   const rpcUrl = `http://${window.location.hostname}:8899`;
@@ -28,14 +27,12 @@ export default function App() {
   const [txRows, setTxRows] = useState([]);
   const [recentTxWidget, setRecentTxWidget] = useState([]);
   const [theme, setTheme] = useState('dark');
+  const [walletRefreshKey, setWalletRefreshKey] = useState(0);
 
-  const keypair = useMemo(() => {
-    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (!saved) return null;
-    try { return Keypair.fromSecretKey(Uint8Array.from(JSON.parse(saved))); } catch (_) { return null; }
-  }, []);
-
-  const address = keypair?.publicKey?.toBase58();
+  // Get active wallet and keypair from wallet manager
+  const activeWallet = useMemo(() => getActiveWallet(), [walletRefreshKey]);
+  const keypair = useMemo(() => getActiveKeypair(), [walletRefreshKey]);
+  const address = activeWallet?.publicKey || keypair?.publicKey?.toBase58();
 
   async function refresh() {
     if (!keypair) return;
@@ -51,7 +48,26 @@ export default function App() {
     }
   }
 
-  useEffect(() => { refresh(); }, [address]);
+  // Refresh when wallet changes
+  useEffect(() => { 
+    if (address) {
+      refresh(); 
+    } else {
+      setBalance(null);
+      setTxRows([]);
+      setRecentTxWidget([]);
+    }
+  }, [address, walletRefreshKey]);
+
+  // Listen for wallet changes
+  useEffect(() => {
+    const handleWalletChange = () => {
+      setWalletRefreshKey(prev => prev + 1);
+    };
+    
+    window.addEventListener('walletChanged', handleWalletChange);
+    return () => window.removeEventListener('walletChanged', handleWalletChange);
+  }, []);
 
   // Load theme on mount
   useEffect(() => {
@@ -89,13 +105,13 @@ export default function App() {
     toast.success('Address copied');
   }
 
-  function clearLocal() {
-    // Clear backup flag before removing wallet
-    if (address) {
-      clearBackupFlag(address);
-    }
-    localStorage.removeItem(LOCAL_STORAGE_KEY);
-    window.location.reload();
+  function handleWalletChange() {
+    setWalletRefreshKey(prev => prev + 1);
+  }
+
+  function handleAddWallet() {
+    // Redirect to settings to create/import wallet
+    setActive('settings');
   }
 
   return (
@@ -110,9 +126,15 @@ export default function App() {
         }} />
         <main className="flex-1 p-6 md:p-8 space-y-6 max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
-              <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50"></div>
-              <span>Connected to: {rpcUrl}</span>
+            <div className="flex items-center gap-3">
+              <WalletSwitcher 
+                onWalletChange={handleWalletChange}
+                onAddWallet={handleAddWallet}
+              />
+              <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50"></div>
+                <span>Connected to: {rpcUrl}</span>
+              </div>
             </div>
             <ThemeToggle />
           </div>
@@ -134,7 +156,12 @@ export default function App() {
           )}
 
           {active === 'settings' && (
-            <Settings address={address} rpcUrl={rpcUrl} onClearLocal={clearLocal} onWalletImported={refresh} />
+            <Settings 
+              address={address} 
+              rpcUrl={rpcUrl} 
+              onWalletImported={handleWalletChange} 
+              activeWallet={activeWallet}
+            />
           )}
         </main>
       </div>

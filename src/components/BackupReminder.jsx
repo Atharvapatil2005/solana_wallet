@@ -1,38 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, X, Download } from 'lucide-react';
-import { hasBackupDownloaded, setBackupDownloaded } from '../utils/walletStorage.js';
-
-const LOCAL_STORAGE_KEY = 'solana_wallet_secret';
+import { getActiveWallet, exportWallet } from '../utils/walletManager.js';
 
 export default function BackupReminder({ address, onDownload }) {
   const [isVisible, setIsVisible] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
-    if (!address) {
-      setIsVisible(false);
+    const checkBackupStatus = () => {
+      if (!address) {
+        setIsVisible(false);
+        setIsDismissed(false);
+        return;
+      }
+
+      // Reset dismissal state when address changes
       setIsDismissed(false);
-      return;
-    }
 
-    // Reset dismissal state when address changes
-    setIsDismissed(false);
+      // Check if dismissed for this session
+      const sessionKey = `backup_reminder_dismissed_${address}`;
+      const sessionDismissed = sessionStorage.getItem(sessionKey);
+      
+      if (sessionDismissed === 'true') {
+        setIsDismissed(true);
+        setIsVisible(false);
+        return;
+      }
 
-    // Check if dismissed for this session
-    const sessionKey = `backup_reminder_dismissed_${address}`;
-    const sessionDismissed = sessionStorage.getItem(sessionKey);
+      // Check if backup has been downloaded from wallet manager
+      const activeWallet = getActiveWallet();
+      const backupDownloaded = activeWallet?.backupDownloaded || false;
+      
+      setIsVisible(!backupDownloaded);
+    };
+
+    checkBackupStatus();
     
-    if (sessionDismissed === 'true') {
-      setIsDismissed(true);
-      setIsVisible(false);
-      return;
-    }
-
-    // Check if backup has been downloaded
-    const backupDownloaded = hasBackupDownloaded(address);
+    // Listen for wallet changes
+    const handleWalletChange = () => {
+      checkBackupStatus();
+    };
     
-    setIsVisible(!backupDownloaded);
+    window.addEventListener('walletChanged', handleWalletChange);
+    return () => window.removeEventListener('walletChanged', handleWalletChange);
   }, [address]);
 
   const handleDismiss = () => {
@@ -43,32 +54,22 @@ export default function BackupReminder({ address, onDownload }) {
     setIsVisible(false);
   };
 
-  const handleDownload = () => {
-    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (!saved) {
-      console.warn('No wallet found in localStorage');
+  const handleDownload = async () => {
+    const activeWallet = getActiveWallet();
+    if (!activeWallet) {
+      console.warn('No wallet found');
       return;
     }
 
     try {
-      // Download the wallet.json file
-      const blob = new Blob([JSON.stringify(JSON.parse(saved), null, 2)], { 
-        type: 'application/json' 
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'wallet.json';
-      a.click();
-      URL.revokeObjectURL(url);
+      // Use wallet manager export function
+      await exportWallet(activeWallet.id);
+      
+      // Hide the banner (backupDownloaded flag is set by exportWallet)
+      setIsVisible(false);
 
-      // Mark backup as downloaded
-      if (address) {
-        setBackupDownloaded(address);
-        
-        // Re-check visibility after setting flag
-        setIsVisible(false);
-      }
+      // Dispatch wallet changed event to update UI
+      window.dispatchEvent(new CustomEvent('walletChanged'));
 
       // Call the optional callback
       onDownload?.();
