@@ -111,4 +111,71 @@ export async function getRecentTransactionsDetailed(pubkey, limit = 10) {
   }
 }
 
+// Returns last 3 transactions formatted for dashboard widget
+export async function getRecentTransactionsWidget(pubkey, limit = 3) {
+  try {
+    const sigInfos = await connection.getSignaturesForAddress(pubkey, { limit });
+    if (!sigInfos || sigInfos.length === 0) return [];
+    
+    const results = [];
+    for (const sigInfo of sigInfos) {
+      const sig = sigInfo.signature;
+      const tx = await connection.getTransaction(sig, { commitment: 'confirmed' });
+      
+      // Determine type and amount
+      let type = 'Transfer';
+      let amountSol = 0;
+      let status = 'Pending';
+      
+      if (tx?.meta) {
+        const pre = tx.meta.preBalances?.[0] ?? 0;
+        const post = tx.meta.postBalances?.[0] ?? pre;
+        const diff = post - pre;
+        
+        if (diff < 0) {
+          type = 'Send';
+          amountSol = (-diff) / LAMPORTS_PER_SOL;
+        } else if (diff > 0) {
+          type = 'Receive';
+          amountSol = diff / LAMPORTS_PER_SOL;
+        }
+        
+        status = tx.meta.err ? 'Failed' : 'Confirmed';
+      } else {
+        status = sigInfo.confirmationStatus === 'confirmed' ? 'Confirmed' : 'Pending';
+      }
+      
+      // Calculate relative timestamp
+      const blockTime = tx?.blockTime ? tx.blockTime * 1000 : Date.now();
+      const now = Date.now();
+      const diffMs = now - blockTime;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      
+      let timestamp = 'Just now';
+      if (diffMins > 0) timestamp = `${diffMins}m ago`;
+      if (diffHours > 0) timestamp = `${diffHours}h ago`;
+      if (diffDays > 0) timestamp = `${diffDays}d ago`;
+      
+      // Short signature (first 4 + last 4 chars)
+      const shortSig = sig.length > 8 ? `${sig.slice(0, 4)}...${sig.slice(-4)}` : sig;
+      
+      results.push({
+        signature: sig,
+        type,
+        amountSol,
+        status,
+        timestamp,
+        shortSig,
+      });
+    }
+    
+    return results;
+  } catch (error) {
+    console.error('getRecentTransactionsWidget failed:', error);
+    return [];
+  }
+}
+
 

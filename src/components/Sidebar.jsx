@@ -11,9 +11,12 @@ const items = [
 
 export default function Sidebar({ active, onChange }) {
   return (
-    <aside className="w-64 shrink-0 glass min-h-screen hidden md:flex flex-col relative overflow-hidden">
+    <aside className="w-64 shrink-0 glass min-h-screen hidden md:flex flex-col relative overflow-hidden" style={{
+      background: 'var(--glass-bg)',
+      borderColor: 'var(--glass-border)'
+    }}>
       {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900/50 via-neutral-900/80 to-slate-800/50"></div>
+      <div className="absolute inset-0 sidebar-bg"></div>
       
       {/* Content */}
       <div className="relative z-10">
@@ -22,7 +25,7 @@ export default function Sidebar({ active, onChange }) {
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center">
               <span className="text-white font-bold text-sm">S</span>
             </div>
-            <div className="text-white font-semibold tracking-wide text-lg">Solana Wallet</div>
+            <div className="text-theme-primary font-semibold tracking-wide text-lg">Solana Wallet</div>
           </div>
         </div>
         
@@ -36,8 +39,11 @@ export default function Sidebar({ active, onChange }) {
                 className={`sidebar-button w-full flex items-center gap-4 px-4 py-3 rounded-2xl group relative overflow-hidden transition-all duration-300 ease-in-out ${
                   isActive 
                     ? 'bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 text-white shadow-lg shadow-emerald-500/10 border border-emerald-500/20' 
-                    : 'text-neutral-300/70 hover:text-white hover:bg-white/5 hover:shadow-lg hover:shadow-white/5'
+                    : 'hover:bg-white/5 hover:shadow-lg hover:shadow-white/5'
                 }`}
+                style={{
+                  color: isActive ? 'white' : 'var(--text-secondary)'
+                }}
               >
                 {isActive && (
                   <>
@@ -46,12 +52,13 @@ export default function Sidebar({ active, onChange }) {
                     <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-3/4 bg-gradient-to-b from-cyan-400 to-purple-500 rounded-r-full shadow-lg shadow-cyan-400/50 blur-sm"></div>
                   </>
                 )}
-                <Icon size={20} className={`relative z-10 transition-all duration-300 ease-in-out ${
-                  isActive 
-                    ? 'text-emerald-400' 
-                    : 'opacity-70 group-hover:opacity-100 group-hover:text-white'
-                }`} />
-                <span className="text-sm font-medium relative z-10">{label}</span>
+                <Icon size={20} className="relative z-10 transition-all duration-300 ease-in-out" style={{
+                  color: isActive ? '#22c55e' : 'var(--text-secondary)',
+                  opacity: isActive ? 1 : 0.7
+                }} />
+                <span className="text-sm font-medium relative z-10" style={{
+                  color: isActive ? 'white' : 'var(--text-secondary)'
+                }}>{label}</span>
               </button>
             );
           })}

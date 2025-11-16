@@ -8,7 +8,8 @@ export default function BalanceCard({ balanceSol, onSend, onReceive }) {
       animate={{ opacity: 1, y: 0 }} 
       transition={{ duration: 0.4, ease: "easeOut" }} 
       whileHover={{ scale: 1.02 }}
-      className="relative rounded-3xl p-8 glass-card glass-card-hover text-white overflow-hidden transition-transform duration-300 ease-in-out"
+      className="relative rounded-3xl p-8 glass-card glass-card-hover overflow-hidden transition-transform duration-300 ease-in-out"
+      style={{ color: 'var(--text-primary)' }}
     >
       {/* Background glow effect */}
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-cyan-500/5 rounded-3xl"></div>
@@ -17,7 +18,7 @@ export default function BalanceCard({ balanceSol, onSend, onReceive }) {
       <div className="relative z-10">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
-            <p className="text-sm text-neutral-400 font-medium tracking-wide">Total Balance</p>
+            <p className="text-sm font-medium tracking-wide" style={{ color: 'var(--text-secondary)' }}>Total Balance</p>
             <div className="flex items-baseline gap-3">
               <p className="text-5xl font-bold bg-gradient-to-r from-white via-emerald-100 to-cyan-100 bg-clip-text text-transparent">
                 {balanceSol ?? '—'}
@@ -26,7 +27,7 @@ export default function BalanceCard({ balanceSol, onSend, onReceive }) {
                 <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center">
                   <span className="text-white font-bold text-xs">S</span>
                 </div>
-                <span className="text-xl font-semibold text-neutral-300">SOL</span>
+                <span className="text-xl font-semibold" style={{ color: 'var(--text-secondary)' }}>SOL</span>
               </div>
             </div>
           </div>

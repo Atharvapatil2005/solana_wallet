@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { Keypair } from '@solana/web3.js';
+import { setBackupDownloaded } from '../utils/walletStorage.js';
 
 const LOCAL_STORAGE_KEY = 'solana_wallet_secret';
 
@@ -61,13 +62,23 @@ export default function Settings({ address, rpcUrl, onClearLocal, onWalletImport
       toast.info('No wallet in localStorage');
       return;
     }
-    const blob = new Blob([JSON.stringify(JSON.parse(saved), null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'wallet.json';
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const blob = new Blob([JSON.stringify(JSON.parse(saved), null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'wallet.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      // Mark backup as downloaded if address is available
+      if (address) {
+        setBackupDownloaded(address);
+      }
+    } catch (error) {
+      toast.error('Failed to download wallet');
+      console.error('Download error:', error);
+    }
   }
 
   return (

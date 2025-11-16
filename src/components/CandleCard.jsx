@@ -102,8 +102,8 @@ export default function CandleCard() {
       <div className="relative z-10 h-full flex flex-col">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-neutral-200 text-lg font-semibold">SOL/INR</h3>
-            <p className="text-xs text-neutral-400">Candlestick (1d window)</p>
+            <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>SOL/INR</h3>
+            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Candlestick (1d window)</p>
           </div>
           <div className="text-2xl font-bold bg-gradient-to-r from-white via-cyan-100 to-purple-100 bg-clip-text text-transparent">
             {formatINR(price)}
@@ -118,7 +118,7 @@ export default function CandleCard() {
         
         {/* Powered by TradingView label */}
         <div className="absolute bottom-4 right-4">
-          <p className="text-xs text-neutral-500 opacity-60">Powered by TradingView</p>
+          <p className="text-xs opacity-60" style={{ color: 'var(--text-tertiary)' }}>Powered by TradingView</p>
         </div>
       </div>
       

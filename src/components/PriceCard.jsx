@@ -97,8 +97,8 @@ export default function PriceCard() {
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-neutral-200 text-lg font-semibold">SOL Price</h3>
-            <p className="text-xs text-neutral-400">Live market data</p>
+            <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>SOL Price</h3>
+            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Live market data</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="relative">
@@ -130,7 +130,7 @@ export default function PriceCard() {
                   {formatChange(priceChange)}
                 </div>
               </div>
-              <p className="text-sm text-neutral-400">24h change</p>
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>24h change</p>
             </div>
             
             {/* Sparkline Chart */}
@@ -141,7 +141,7 @@ export default function PriceCard() {
             {/* Last updated label */}
             {lastUpdated > 0 && sparklineData.length > 0 && (
               <div className="mt-2 text-center">
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
                   Last updated {secondsAgo} {secondsAgo === 1 ? 'second' : 'seconds'} ago
                 </p>
               </div>
