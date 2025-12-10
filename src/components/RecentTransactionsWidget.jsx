@@ -97,7 +97,7 @@ export default function RecentTransactionsWidget({ transactions, onRefresh }) {
                           {tx.status}
                         </span>
                         <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                          {tx.timestamp}
+                          {tx.relativeTime}
                         </span>
                       </div>
                     </div>
@@ -189,7 +189,7 @@ export default function RecentTransactionsWidget({ transactions, onRefresh }) {
                             </div>
                             <div>
                               <p className="text-xs text-neutral-400 mb-1">Time</p>
-                              <p className="text-sm font-medium text-neutral-200">{selectedTx.timestamp}</p>
+                              <p className="text-sm font-medium text-neutral-200">{selectedTx.absoluteTime}</p>
                             </div>
                           </div>
                         </div>

@@ -373,15 +373,21 @@ export default function SendModal({ open, onOpenChange, onConfirm }) {
                       )}
                       
                       <div className="flex gap-3 justify-end pt-4">
-                        <button 
+                        <motion.button 
                           onClick={close} 
-                          className="hover-lift px-6 py-3 rounded-2xl bg-neutral-800/50 border border-neutral-700/50 hover:bg-neutral-700/50 hover:border-neutral-600/50 text-sm font-semibold text-neutral-300 transition-all duration-300 ease-in-out"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.97 }}
+                          transition={{ duration: 0.15, ease: 'easeOut' }}
+                          className="hover-lift px-6 py-3 rounded-2xl bg-neutral-800/50 border border-neutral-700/50 hover:bg-neutral-700/50 hover:border-neutral-400/60 text-sm font-semibold text-neutral-300 transition-all duration-300 ease-in-out hover:shadow-[0_0_18px_rgba(148,163,184,0.25)]"
                         >
                           Cancel
-                        </button>
+                        </motion.button>
                         <motion.button 
                           onClick={confirm} 
-                          className="px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-sm font-semibold text-white shadow-lg hover:shadow-emerald-500/25 glow-green transition-all duration-300 ease-in-out"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.97 }}
+                          transition={{ duration: 0.15, ease: 'easeOut' }}
+                          className="px-6 py-3 rounded-2xl border border-transparent bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-sm font-semibold text-white shadow-lg hover:shadow-emerald-500/35 glow-green transition-all duration-300 ease-in-out hover:border-emerald-300/60"
                           animate={showSuccess ? {
                             boxShadow: [
                               '0 0 20px rgba(34, 197, 94, 0.3)',

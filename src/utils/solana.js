@@ -7,6 +7,7 @@ import {
   Transaction,
   sendAndConfirmTransaction,
 } from '@solana/web3.js';
+import { formatTimestamp, formatRelativeTimestamp } from './time.js';
 
 // Dynamic connection to local validator based on current hostname
 // For demo only. In production, use a reliable RPC and connection options.
@@ -84,16 +85,26 @@ export async function getRecentTransactions(pubkey, limit = 10) {
   }
 }
 
+function resolveBlockTimeSeconds(tx, sigInfo) {
+  if (tx?.blockTime) return tx.blockTime;
+  if (tx?.meta?.blockTime) return tx.meta.blockTime;
+  if (sigInfo?.blockTime) return sigInfo.blockTime;
+  return null;
+}
+
 // Returns a richer transaction view (date, amount if known, direction)
 export async function getRecentTransactionsDetailed(pubkey, limit = 10) {
   try {
     const sigInfos = await connection.getSignaturesForAddress(pubkey, { limit });
     const signatures = sigInfos.map((s) => s.signature);
+    const sigInfoMap = new Map(sigInfos.map((info) => [info.signature, info]));
     const results = [];
     for (const sig of signatures) {
       const tx = await connection.getTransaction(sig, { commitment: 'confirmed' });
-      const blockTime = tx?.blockTime ? new Date(tx.blockTime * 1000) : null;
-      const date = blockTime ? blockTime.toLocaleString() : '—';
+      const sigInfo = sigInfoMap.get(sig);
+      const blockTimeSeconds = resolveBlockTimeSeconds(tx, sigInfo);
+      const timestampMs = blockTimeSeconds ? blockTimeSeconds * 1000 : Date.now();
+      const date = formatTimestamp(timestampMs);
       let amount = '—';
       let type = 'Transfer';
       if (tx?.meta) {
@@ -145,18 +156,11 @@ export async function getRecentTransactionsWidget(pubkey, limit = 3) {
         status = sigInfo.confirmationStatus === 'confirmed' ? 'Confirmed' : 'Pending';
       }
       
-      // Calculate relative timestamp
-      const blockTime = tx?.blockTime ? tx.blockTime * 1000 : Date.now();
-      const now = Date.now();
-      const diffMs = now - blockTime;
-      const diffMins = Math.floor(diffMs / 60000);
-      const diffHours = Math.floor(diffMs / 3600000);
-      const diffDays = Math.floor(diffMs / 86400000);
-      
-      let timestamp = 'Just now';
-      if (diffMins > 0) timestamp = `${diffMins}m ago`;
-      if (diffHours > 0) timestamp = `${diffHours}h ago`;
-      if (diffDays > 0) timestamp = `${diffDays}d ago`;
+      // Calculate timestamps
+      const blockTimeSeconds = resolveBlockTimeSeconds(tx, sigInfo);
+      const timestampMs = blockTimeSeconds ? blockTimeSeconds * 1000 : Date.now();
+      const relativeTime = formatRelativeTimestamp(timestampMs);
+      const absoluteTime = formatTimestamp(timestampMs);
       
       // Short signature (first 4 + last 4 chars)
       const shortSig = sig.length > 8 ? `${sig.slice(0, 4)}...${sig.slice(-4)}` : sig;
@@ -166,7 +170,8 @@ export async function getRecentTransactionsWidget(pubkey, limit = 3) {
         type,
         amountSol,
         status,
-        timestamp,
+        relativeTime,
+        absoluteTime,
         shortSig,
       });
     }

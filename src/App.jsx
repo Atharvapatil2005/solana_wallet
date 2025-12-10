@@ -5,7 +5,7 @@ import { LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
 import { getBalance, getRecentTransactionsDetailed, getRecentTransactionsWidget, sendSol } from './utils/solana.js';
 import { getActiveWallet, getActiveKeypair } from './utils/walletManager.js';
 import Sidebar from './components/Sidebar.jsx';
-import BalanceCard from './components/BalanceCard.jsx';
+import WalletCard from './components/WalletCard.jsx';
 import Dashboard from './components/Dashboard.jsx';
 import PriceCard from './components/PriceCard.jsx';
 import CandleCard from './components/CandleCard.jsx';
@@ -142,7 +142,13 @@ export default function App() {
           {active === 'dashboard' && (
             <>
               <BackupReminder address={address} onDownload={refresh} />
-              <BalanceCard balanceSol={balance} onSend={() => setSendOpen(true)} onReceive={() => setReceiveOpen(true)} />
+              <WalletCard
+                balanceSol={balance}
+                address={address}
+                walletLabel={activeWallet?.label}
+                onSend={() => setSendOpen(true)}
+                onReceive={() => setReceiveOpen(true)}
+              />
               <div className="grid md:grid-cols-2 gap-6">
                 <PriceCard />
                 <CandleCard />
@@ -166,7 +172,13 @@ export default function App() {
         </main>
       </div>
       <SendModal open={sendOpen} onOpenChange={setSendOpen} onConfirm={handleSend} />
-      <ReceiveModal open={receiveOpen} onOpenChange={setReceiveOpen} address={address} onCopy={handleCopy} />
+      <ReceiveModal
+        open={receiveOpen}
+        onOpenChange={setReceiveOpen}
+        address={address}
+        onCopy={handleCopy}
+        secretKeyArray={activeWallet?.secretKey}
+      />
       <ToastContainer 
         position="top-right" 
         autoClose={2500} 
