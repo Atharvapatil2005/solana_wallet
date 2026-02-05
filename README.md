@@ -1,4 +1,4 @@
-# Solana Wallet
+# Solana Wallet(https://solana-wallet-ruby.vercel.app)
 
 A simple educational Solana wallet web app for local development. Not production-ready.
 
