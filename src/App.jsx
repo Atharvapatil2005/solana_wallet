@@ -19,7 +19,10 @@ import BackupReminder from './components/BackupReminder.jsx';
 import WalletSwitcher from './components/WalletSwitcher.jsx';
 
 export default function App() {
-  const rpcUrl = `http://${window.location.hostname}:8899`;
+  const rpcUrl =
+    import.meta.env.VITE_SOLANA_RPC ||
+    'http://127.0.0.1:8899';
+
   const [active, setActive] = useState('dashboard');
   const [sendOpen, setSendOpen] = useState(false);
   const [receiveOpen, setReceiveOpen] = useState(false);
