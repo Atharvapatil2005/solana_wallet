@@ -2,11 +2,17 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
-import { getBalance, getRecentTransactionsDetailed, getRecentTransactionsWidget, sendSol } from './utils/solana.js';
+import {
+  getBalance,
+  getRecentTransactionsDetailed,
+  getRecentTransactionsWidget,
+  getRpcEndpoint,
+  sendSol,
+  setRpcEndpoint,
+} from './utils/solana.js';
 import { getActiveWallet, getActiveKeypair } from './utils/walletManager.js';
 import Sidebar from './components/Sidebar.jsx';
 import WalletCard from './components/WalletCard.jsx';
-import Dashboard from './components/Dashboard.jsx';
 import PriceCard from './components/PriceCard.jsx';
 import CandleCard from './components/CandleCard.jsx';
 import RecentTransactionsWidget from './components/RecentTransactionsWidget.jsx';
@@ -19,9 +25,7 @@ import BackupReminder from './components/BackupReminder.jsx';
 import WalletSwitcher from './components/WalletSwitcher.jsx';
 
 export default function App() {
-  const rpcUrl =
-    import.meta.env.VITE_SOLANA_RPC ||
-    'http://127.0.0.1:8899';
+  const [rpcUrl, setRpcUrl] = useState(() => getRpcEndpoint());
 
   const [active, setActive] = useState('dashboard');
   const [sendOpen, setSendOpen] = useState(false);
@@ -60,7 +64,7 @@ export default function App() {
       setTxRows([]);
       setRecentTxWidget([]);
     }
-  }, [address, walletRefreshKey]);
+  }, [address, walletRefreshKey, rpcUrl]);
 
   // Listen for wallet changes
   useEffect(() => {
@@ -117,6 +121,18 @@ export default function App() {
     setActive('settings');
   }
 
+  function handleRpcChange(nextRpcUrl) {
+    try {
+      const updatedRpcUrl = setRpcEndpoint(nextRpcUrl);
+      setRpcUrl(updatedRpcUrl);
+      if (address) {
+        refresh();
+      }
+    } catch (error) {
+      toast.error(error.message || 'Failed to switch RPC endpoint');
+    }
+  }
+
   return (
     <div className="min-h-screen app-bg" style={{ 
       color: 'var(--text-primary)'
@@ -168,6 +184,7 @@ export default function App() {
             <Settings 
               address={address} 
               rpcUrl={rpcUrl} 
+              onRpcChange={handleRpcChange}
               onWalletImported={handleWalletChange} 
               activeWallet={activeWallet}
             />
@@ -190,5 +207,4 @@ export default function App() {
     </div>
   );
 }
-
 

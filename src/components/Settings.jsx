@@ -1,13 +1,25 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { Keypair } from '@solana/web3.js';
 import { addWallet, importWallet, exportWallet, getWallets } from '../utils/walletManager.js';
 import { getActiveWallet } from '../utils/walletManager.js';
+import { PRESET_RPC_ENDPOINTS } from '../utils/rpcConfig.js';
 
-export default function Settings({ address, rpcUrl, onWalletImported, activeWallet }) {
+export default function Settings({ address, rpcUrl, onRpcChange, onWalletImported, activeWallet }) {
   const [secretText, setSecretText] = useState('');
+  const [selectedRpcUrl, setSelectedRpcUrl] = useState(rpcUrl || '');
   const fileRef = useRef(null);
+
+  useEffect(() => {
+    setSelectedRpcUrl(rpcUrl);
+  }, [rpcUrl]);
+
+  function handleRpcSelectionChange(event) {
+    const nextRpcUrl = event.target.value;
+    setSelectedRpcUrl(nextRpcUrl);
+    onRpcChange?.(nextRpcUrl);
+  }
 
   function importFromArray(arr) {
     try {
@@ -112,11 +124,31 @@ export default function Settings({ address, rpcUrl, onWalletImported, activeWall
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900/30 via-neutral-900/50 to-slate-800/30"></div>
         <div className="relative z-10">
           <h3 className="text-lg text-neutral-200 font-semibold mb-4">Network</h3>
-          <div className="flex items-center gap-3 p-4 rounded-2xl bg-neutral-800/50 border border-neutral-700/50">
-            <div className="w-3 h-3 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50"></div>
-            <div>
-              <p className="text-sm text-neutral-400">RPC Endpoint</p>
-              <p className="text-sm font-mono text-neutral-200">{rpcUrl}</p>
+          <div className="space-y-3 p-4 rounded-2xl bg-neutral-800/50 border border-neutral-700/50">
+            <label className="block text-sm text-neutral-400 font-medium" htmlFor="network-select">
+              Select Network
+            </label>
+            <select
+              id="network-select"
+              value={selectedRpcUrl}
+              onChange={handleRpcSelectionChange}
+              className="w-full rounded-xl bg-neutral-900/80 border border-neutral-700/60 px-3 py-2 text-sm text-neutral-200 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+            >
+              {PRESET_RPC_ENDPOINTS.map((endpoint) => (
+                <option key={endpoint.id} value={endpoint.url}>
+                  {endpoint.label}
+                </option>
+              ))}
+              {!PRESET_RPC_ENDPOINTS.some((endpoint) => endpoint.url === selectedRpcUrl) && (
+                <option value={selectedRpcUrl}>Custom (saved)</option>
+              )}
+            </select>
+            <div className="flex items-start gap-3">
+              <div className="w-3 h-3 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50 mt-1"></div>
+              <div>
+                <p className="text-sm text-neutral-400">RPC Endpoint</p>
+                <p className="text-sm font-mono text-neutral-200 break-all">{rpcUrl}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -188,5 +220,3 @@ export default function Settings({ address, rpcUrl, onWalletImported, activeWall
     </section>
   );
 }
-
-

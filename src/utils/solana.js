@@ -8,11 +8,19 @@ import {
   sendAndConfirmTransaction,
 } from '@solana/web3.js';
 import { formatTimestamp, formatRelativeTimestamp } from './time.js';
+import { getRpcUrl, setRpcUrl } from './rpcConfig.js';
 
-// Dynamic connection to local validator based on current hostname
-// For demo only. In production, use a reliable RPC and connection options.
-const rpcUrl = `http://${window.location.hostname}:8899`;
-export const connection = new Connection(rpcUrl, 'confirmed');
+export let connection = new Connection(getRpcUrl(), 'confirmed');
+
+export function getRpcEndpoint() {
+  return getRpcUrl();
+}
+
+export function setRpcEndpoint(url) {
+  const nextUrl = setRpcUrl(url);
+  connection = new Connection(nextUrl, 'confirmed');
+  return nextUrl;
+}
 
 // Returns balance in lamports for a given public key
 export async function getBalance(pubkey) {
@@ -182,5 +190,4 @@ export async function getRecentTransactionsWidget(pubkey, limit = 3) {
     return [];
   }
 }
-
 
