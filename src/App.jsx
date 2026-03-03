@@ -1,16 +1,17 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
+import { LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import {
   getBalance,
   getRecentTransactionsDetailed,
   getRecentTransactionsWidget,
-  getRpcEndpoint,
   sendSol,
-  setRpcEndpoint,
 } from './utils/solana.js';
 import { getActiveWallet, getActiveKeypair } from './utils/walletManager.js';
+import { useRpc } from './providers.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import WalletCard from './components/WalletCard.jsx';
 import PriceCard from './components/PriceCard.jsx';
@@ -25,7 +26,9 @@ import BackupReminder from './components/BackupReminder.jsx';
 import WalletSwitcher from './components/WalletSwitcher.jsx';
 
 export default function App() {
-  const [rpcUrl, setRpcUrl] = useState(() => getRpcEndpoint());
+  const { rpcUrl, setRpcUrl } = useRpc();
+  const { connection } = useConnection();
+  const { publicKey, connected, sendTransaction, connecting, disconnecting } = useWallet();
 
   const [active, setActive] = useState('dashboard');
   const [sendOpen, setSendOpen] = useState(false);
@@ -35,55 +38,74 @@ export default function App() {
   const [recentTxWidget, setRecentTxWidget] = useState([]);
   const [theme, setTheme] = useState('dark');
   const [walletRefreshKey, setWalletRefreshKey] = useState(0);
+  const [walletMode, setWalletMode] = useState('internal');
 
-  // Get active wallet and keypair from wallet manager
   const activeWallet = useMemo(() => getActiveWallet(), [walletRefreshKey]);
   const keypair = useMemo(() => getActiveKeypair(), [walletRefreshKey]);
-  const address = activeWallet?.publicKey || keypair?.publicKey?.toBase58();
+
+  const externalAddress = publicKey?.toBase58();
+  const internalAddress = activeWallet?.publicKey || keypair?.publicKey?.toBase58();
+  const usingExternalWallet = walletMode === 'external' && connected && !!publicKey;
+
+  const effectivePublicKey = useMemo(() => {
+    if (usingExternalWallet) return publicKey;
+    return keypair?.publicKey || null;
+  }, [usingExternalWallet, publicKey, keypair]);
+
+  const address = usingExternalWallet ? externalAddress : internalAddress;
+
+  const walletLabel = useMemo(() => {
+    if (usingExternalWallet) return 'External Wallet';
+    return activeWallet?.label;
+  }, [usingExternalWallet, activeWallet]);
 
   async function refresh() {
-    if (!keypair) return;
+    if (!effectivePublicKey) return;
     try {
-      const lamports = await getBalance(keypair.publicKey);
+      const lamports = await getBalance(effectivePublicKey);
       setBalance(lamports / LAMPORTS_PER_SOL);
-      const rows = await getRecentTransactionsDetailed(keypair.publicKey, 10);
+      const rows = await getRecentTransactionsDetailed(effectivePublicKey, 10);
       setTxRows(rows);
-      const widgetData = await getRecentTransactionsWidget(keypair.publicKey, 3);
+      const widgetData = await getRecentTransactionsWidget(effectivePublicKey, 3);
       setRecentTxWidget(widgetData);
     } catch (e) {
       toast.error(e.message);
     }
   }
 
-  // Refresh when wallet changes
-  useEffect(() => { 
-    if (address) {
-      refresh(); 
+  useEffect(() => {
+    if (effectivePublicKey) {
+      refresh();
     } else {
       setBalance(null);
       setTxRows([]);
       setRecentTxWidget([]);
     }
-  }, [address, walletRefreshKey, rpcUrl]);
+  }, [walletRefreshKey, rpcUrl, walletMode, externalAddress, internalAddress]);
 
-  // Listen for wallet changes
   useEffect(() => {
     const handleWalletChange = () => {
-      setWalletRefreshKey(prev => prev + 1);
+      setWalletRefreshKey((prev) => prev + 1);
     };
-    
+
     window.addEventListener('walletChanged', handleWalletChange);
     return () => window.removeEventListener('walletChanged', handleWalletChange);
   }, []);
 
-  // Load theme on mount
+  useEffect(() => {
+    if (!connected && walletMode === 'external') {
+      setBalance(null);
+      setTxRows([]);
+      setRecentTxWidget([]);
+    }
+  }, [connected, walletMode]);
+
   useEffect(() => {
     const savedTheme = localStorage.getItem('solana_wallet_theme') || 'dark';
     setTheme(savedTheme);
     document.body.className = `theme-${savedTheme}`;
   }, []);
 
-  // Watch for theme changes
   useEffect(() => {
     const observer = new MutationObserver(() => {
       const bodyTheme = document.body.className.includes('theme-light') ? 'light' : 'dark';
@@ -96,14 +118,49 @@ export default function App() {
   }, [theme]);
 
   async function handleSend({ to, amount }) {
-    if (!keypair) return toast.info('Create or import a wallet first');
     try {
       const lamports = Math.round(parseFloat(amount) * LAMPORTS_PER_SOL);
-      const sig = await sendSol(keypair, new PublicKey(to), lamports);
-      toast.success(`Sent: ${sig}`);
+      if (!Number.isFinite(lamports) || lamports <= 0) {
+        throw new Error('Enter a valid amount');
+      }
+
+      if (usingExternalWallet) {
+        if (!publicKey || !sendTransaction) {
+          toast.info('Connect an external wallet first');
+          return;
+        }
+
+        const tx = new Transaction().add(
+          SystemProgram.transfer({
+            fromPubkey: publicKey,
+            toPubkey: new PublicKey(to),
+            lamports,
+          })
+        );
+
+        const signature = await sendTransaction(tx, connection, {
+          preflightCommitment: 'confirmed',
+          skipPreflight: false,
+        });
+
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+        await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
+
+        toast.success(`Sent: ${signature}`);
+      } else {
+        if (!keypair) {
+          toast.info('Create or import an internal wallet first');
+          return;
+        }
+        const sig = await sendSol(keypair, new PublicKey(to), lamports);
+        toast.success(`Sent: ${sig}`);
+      }
+
       await refresh();
       setSendOpen(false);
-    } catch (e) { toast.error(e.message); }
+    } catch (e) {
+      toast.error(e.message || 'Failed to send transaction');
+    }
   }
 
   function handleCopy() {
@@ -113,18 +170,16 @@ export default function App() {
   }
 
   function handleWalletChange() {
-    setWalletRefreshKey(prev => prev + 1);
+    setWalletRefreshKey((prev) => prev + 1);
   }
 
   function handleAddWallet() {
-    // Redirect to settings to create/import wallet
     setActive('settings');
   }
 
   function handleRpcChange(nextRpcUrl) {
     try {
-      const updatedRpcUrl = setRpcEndpoint(nextRpcUrl);
-      setRpcUrl(updatedRpcUrl);
+      setRpcUrl(nextRpcUrl);
       if (address) {
         refresh();
       }
@@ -134,37 +189,68 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen app-bg" style={{ 
-      color: 'var(--text-primary)'
-    }}>
+    <div className="min-h-screen app-bg" style={{ color: 'var(--text-primary)' }}>
       <div className="flex">
-        <Sidebar active={active} onChange={(k) => {
-          if (k === 'send') setSendOpen(true);
-          else if (k === 'receive') setReceiveOpen(true);
-          else setActive(k);
-        }} />
+        <Sidebar
+          active={active}
+          onChange={(k) => {
+            if (k === 'send') setSendOpen(true);
+            else if (k === 'receive') setReceiveOpen(true);
+            else setActive(k);
+          }}
+        />
         <main className="flex-1 p-6 md:p-8 space-y-6 max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
-              <WalletSwitcher 
-                onWalletChange={handleWalletChange}
-                onAddWallet={handleAddWallet}
-              />
-              <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50"></div>
-                <span>Connected to: {rpcUrl}</span>
+          <div className="flex items-start justify-between mb-2 gap-4">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2 rounded-xl border border-white/10 px-2 py-1">
+                  <button
+                    onClick={() => setWalletMode('internal')}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                      walletMode === 'internal' ? 'bg-emerald-600 text-white' : 'bg-transparent text-neutral-300'
+                    }`}
+                  >
+                    Internal Wallet
+                  </button>
+                  <button
+                    onClick={() => setWalletMode('external')}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                      walletMode === 'external' ? 'bg-cyan-600 text-white' : 'bg-transparent text-neutral-300'
+                    }`}
+                  >
+                    External Wallet
+                  </button>
+                </div>
+
+                {walletMode === 'internal' ? (
+                  <WalletSwitcher onWalletChange={handleWalletChange} onAddWallet={handleAddWallet} />
+                ) : (
+                  <WalletMultiButton />
+                )}
+
+                <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50"></div>
+                  <span>Connected to: {rpcUrl}</span>
+                </div>
               </div>
+
+              {walletMode === 'external' && (connecting || disconnecting) && (
+                <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  {connecting ? 'Connecting external wallet...' : 'Disconnecting external wallet...'}
+                </div>
+              )}
             </div>
+
             <ThemeToggle />
           </div>
 
           {active === 'dashboard' && (
             <>
-              <BackupReminder address={address} onDownload={refresh} />
+              {walletMode === 'internal' && <BackupReminder address={address} onDownload={refresh} />}
               <WalletCard
                 balanceSol={balance}
                 address={address}
-                walletLabel={activeWallet?.label}
+                walletLabel={walletLabel}
                 onSend={() => setSendOpen(true)}
                 onReceive={() => setReceiveOpen(true)}
               />
@@ -176,16 +262,14 @@ export default function App() {
             </>
           )}
 
-          {active === 'transactions' && (
-            <TransactionTable rows={txRows} />
-          )}
+          {active === 'transactions' && <TransactionTable rows={txRows} />}
 
           {active === 'settings' && (
-            <Settings 
-              address={address} 
-              rpcUrl={rpcUrl} 
+            <Settings
+              address={address}
+              rpcUrl={rpcUrl}
               onRpcChange={handleRpcChange}
-              onWalletImported={handleWalletChange} 
+              onWalletImported={handleWalletChange}
               activeWallet={activeWallet}
             />
           )}
@@ -197,14 +281,9 @@ export default function App() {
         onOpenChange={setReceiveOpen}
         address={address}
         onCopy={handleCopy}
-        secretKeyArray={activeWallet?.secretKey}
+        secretKeyArray={walletMode === 'internal' ? activeWallet?.secretKey : null}
       />
-      <ToastContainer 
-        position="top-right" 
-        autoClose={2500} 
-        theme={theme === 'light' ? 'light' : 'dark'} 
-      />
+      <ToastContainer position="top-right" autoClose={2500} theme={theme === 'light' ? 'light' : 'dark'} />
     </div>
   );
 }
-

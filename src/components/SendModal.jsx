@@ -395,7 +395,6 @@ export default function SendModal({ open, onOpenChange, onConfirm }) {
                               '0 0 20px rgba(34, 197, 94, 0.3)',
                             ]
                           } : {}}
-                          transition={{ duration: 1, repeat: showSuccess ? 2 : 0 }}
                         >
                           Confirm Send
                         </motion.button>
@@ -412,5 +411,4 @@ export default function SendModal({ open, onOpenChange, onConfirm }) {
     </Dialog.Root>
   );
 }
-
 
