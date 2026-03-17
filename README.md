@@ -2,7 +2,7 @@
   <img src="idALOVFFeq_1773715960532.png" width="120"/>
 </p>
 
-<h1 align="center">Siddhan Wallet</h1>
+<h1 align="center">Solana Wallet</h1>
 # Solana Wallet(https://solana-wallet-ruby.vercel.app)
 
 A simple educational Solana wallet web app for local development. Not production-ready.
