@@ -3,9 +3,9 @@
 </p>
 
 <h1 align="center">Solana Wallet</h1>
-# Solana Wallet(https://solana-wallet-ruby.vercel.app)
 
-A simple educational Solana wallet web app for local development. Not production-ready.
+
+A simple Solana wallet web app for local development. 
 
 ## Tech Stack
 - Vite + React
