@@ -1,3 +1,6 @@
+[![npm version](https://img.shields.io/npm/v/@atharvapatill/sol-price)](https://www.npmjs.com/package/@atharvapatill/sol-price)
+[![npm downloads](https://img.shields.io/npm/dm/@atharvapatill/sol-price)](https://www.npmjs.com/package/@atharvapatill/sol-price)
+[![license](https://img.shields.io/npm/l/@atharvapatill/sol-price)](LICENSE)
 # @atharvapatill/sol-price
 
 > Fetch real-time Solana (SOL) price in Indian Rupees (INR) from CoinGecko
