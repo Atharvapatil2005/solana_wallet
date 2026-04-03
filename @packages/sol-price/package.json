@@ -1,7 +1,7 @@
 {
   "name": "@atharvapatil2005/sol-price",
-  "version": "1.0.1",
-  "description": "Fetch real-time Solana (SOL) price in Indian Rupees (INR) from CoinGecko",
+  "version": "1.0.4",
+  "description": "A lightweight utility for fetching live Solana (SOL) prices, INR conversion, 24h change, and smart fallback caching.",
   "main": "dist/index.cjs.js",
   "module": "dist/index.esm.js",
   "type": "module",
@@ -11,13 +11,12 @@
       "require": "./dist/index.cjs.js"
     }
   },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
-  },
+
   "repository": {
     "type": "git",
     "url": "https://github.com/Atharvapatil2005/solana_wallet.git"
   },
+  "homepage": "https://github.com/Atharvapatil2005/solana_wallet#readme",
   "scripts": {
     "build": "vite build",
     "test": "vitest run",
@@ -25,11 +24,15 @@
   },
   "keywords": [
     "solana",
-    "sol",
+    "sol-price",
+    "crypto-price",
+    "coingecko",
+    "price-feed",
     "inr",
-    "price",
-    "crypto",
-    "currency"
+    "currency-formatter",
+    "web3",
+    "defi",
+    "npm-package"
   ],
   "license": "MIT",
   "files": [
