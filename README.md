@@ -5,7 +5,8 @@
 <h1 align="center">Solana Wallet</h1>
 
 
-A simple Solana wallet web app for local development. 
+# Solana Wallet
+A modern Solana wallet built with React, Vite, Solana Web3.js, Wallet Adapter, multi-wallet support, live SOL price charts, RPC switching, NFT-ready architecture, and transaction management.
 
 ## Tech Stack
 - Vite + React
